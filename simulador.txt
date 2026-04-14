@@ -1,0 +1,30 @@
+int a;
+float media;
+char letra;
+string nome;
+bool ativo;
+
+int x, y;
+x = 10;
+y = (x + 2) * 3 - 1 % 2;
+
+float b;
+se (a >= 10 && b != 0) entao
+    escreva(a);
+senao
+    escreva(b);
+end
+
+// comentario de linha
+
+/*
+comentario de mais de uma linha
+*/
+
+int ok;
+ok = 10;
+
+float ruim;
+ruim = 12;
+
+string invalida = "sem fechar;
