@@ -156,9 +156,9 @@ ID_TK: {ID}
 
 // REQUISITO: Declaração de múltiplas variáveis e vetores
 <decl_var> ::= <tipo> <lista_ids> PV ;
-<tipo> ::= INT_KW | FLOAT_KW | CHAR_KW | STRING_KW | BOOL_KW ;
+<tipo> ::= INT_KW #1 | FLOAT_KW #1 | CHAR_KW #1 | STRING_KW #1 | BOOL_KW #1 ;
 <lista_ids> ::= <lista_ids> VIRGULA <id_array> | <id_array> ;
-<id_array> ::= ID_TK | ID_TK ABRE_COL <expressao> FECHA_COL | ID_TK ATRIB <expressao> ;
+<id_array> ::= ID_TK #2 | ID_TK #5 ABRE_COL <expressao> FECHA_COL | ID_TK #20 ATRIB <expressao> ;
 
 // REQUISITO: Desvios condicionais simples e compostos
 <cmd_se> ::= SE_KW ABRE_PAR <expressao> FECHA_PAR ENTAO_KW <bloco> END_KW
@@ -172,14 +172,14 @@ ID_TK: {ID}
 // REQUISITO: Entrada e Saída
 <cmd_leia> ::= LEIA_KW ABRE_PAR <lista_acessos> FECHA_PAR PV ;
 <lista_acessos> ::= <lista_acessos> VIRGULA <acesso> | <acesso> ;
-<acesso> ::= ID_TK <compl_acesso> ;
+<acesso> ::= ID_TK #21 <compl_acesso> ;
 <compl_acesso> ::= ABRE_COL <expressao> FECHA_COL | î ;
 
 <cmd_escreva> ::= ESCREVA_KW ABRE_PAR <lista_expr> FECHA_PAR PV ;
 
 // REQUISITO: Atribuição e Chamada (Fatorado para o GALS compilar limpo)
-<cmd_atrib_chamada> ::= ID_TK <fator_id_cmd> PV ;
-<cmd_atrib_chamada_sem_pv> ::= ID_TK <fator_id_cmd> ;
+<cmd_atrib_chamada> ::= ID_TK #11 <fator_id_cmd> PV ;
+<cmd_atrib_chamada_sem_pv> ::= ID_TK #11 <fator_id_cmd> ;
 <fator_id_cmd> ::= <compl_acesso> ATRIB <expressao> | ABRE_PAR <lista_expr_opt> FECHA_PAR ;
 
 <cmd_retorna> ::= RETORNA_KW <expressao> PV | RETORNA_KW PV ;
@@ -200,11 +200,11 @@ ID_TK: {ID}
 <expr_arit> ::= <expr_arit> <op_soma> <termo> | <termo> ;
 <op_soma> ::= PLUS | MINUS ;
 
-<termo> ::= <termo> <op_mult> <fator> | <fator> ;
+<termo> ::= <termo> <op_mult> #41 <fator> | <fator> ;
 <op_mult> ::= MULT | DIV | MOD ;
 
 <fator> ::= ABRE_PAR <expressao> FECHA_PAR
-          | ID_TK <fator_id>
+          | ID_TK #10 <fator_id>
           | <literal>
           | <op_unario> <fator> ;
 
