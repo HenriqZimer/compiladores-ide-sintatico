@@ -1,0 +1,218 @@
+#Options
+GenerateScanner = true
+GenerateParser = true
+Language = Java
+ScannerName = Lexico
+ParserName = Sintatico
+SemanticName = Semantico
+ScannerCaseSensitive = true
+ScannerTable = Hardcode
+Input = String
+Parser = SLR
+#RegularDefinitions
+CHAR_LIT: "'" [^ \n \r '] "'"
+STRING_LIT: \" [^ \n \r \"]* \"
+ID: [a-zA-Z_][a-zA-Z0-9_]*
+NUM_INT: [0-9]+
+NUM_FLOAT: [0-9]+ "." [0-9]+
+COMMENT_LINE: "/" "/" [^\n]*
+COMMENT_MLINE: "/*" ( [^"*"] | "*"+ [^"*/"] )* "*"+ "/"
+WS: [ \t\r\n]+
+#Tokens
+INT_KW: "int"
+FLOAT_KW: "float"
+CHAR_KW: "char"
+STRING_KW: "string"
+BOOL_KW: "bool"
+SE_KW: "se"
+ENTAO_KW: "entao"
+SENAO_KW: "senao"
+END_KW: "end"
+ENQUANTO_KW: "enquanto"
+PARA_KW: "para"
+FACA_KW: "faca"
+LEIA_KW: "leia"
+ESCREVA_KW: "escreva"
+FUNCAO_KW: "funcao"
+PROCEDIMENTO_KW: "procedimento"
+RETORNA_KW: "retorna"
+TRUE_KW: "true"
+FALSE_KW: "false"
+
+: {COMMENT_LINE} | {COMMENT_MLINE}
+
+GE: ">="
+LE: "<="
+EQ: "=="
+NE: "!="
+GT: ">"
+LT: "<"
+AND: "&&"
+OR: "||"
+NOT: "!"
+SHR: ">>"
+SHL: "<<"
+BIT_AND: "&"
+BIT_OR: "|"
+BIT_NOT: "~"
+BIT_XOR: "^"
+PLUS: "+"
+MINUS: "-"
+MULT: "*"
+DIV: "/"
+MOD: "%"
+
+ABRE_PAR: "("
+FECHA_PAR: ")"
+ABRE_COL: "["
+FECHA_COL: "]"
+ABRE_CH: "{"
+FECHA_CH: "}"
+PV: ";"
+VIRGULA: ","
+DOIS_PONTOS: ":"
+PONTO: "."
+ATRIB: "="
+
+LIT_INT_DEC: {NUM_INT}
+LIT_FLOAT: {NUM_FLOAT}
+LIT_CHAR: {CHAR_LIT}
+LIT_STRING: {STRING_LIT}
+ID_TK: {ID}
+
+: [ \t\r\n\ ]+
+#NonTerminals
+<programa>
+<lista_comandos_global>
+<comando_global>
+<def_sub>
+<def_procedimento>
+<def_funcao>
+<lista_params_opt>
+<lista_params>
+<param>
+<bloco>
+<lista_comandos>
+<comando>
+<decl_var>
+<tipo>
+<lista_ids>
+<id_array>
+<cmd_se>
+<cmd_enquanto>
+<cmd_para>
+<cmd_faca>
+<cmd_leia>
+<lista_acessos>
+<acesso>
+<compl_acesso>
+<cmd_escreva>
+<cmd_atrib_chamada>
+<cmd_atrib_chamada_sem_pv>
+<fator_id_cmd>
+<cmd_retorna>
+<lista_expr_opt>
+<lista_expr>
+<expressao>
+<expr_logic>
+<expr_rel>
+<op_rel>
+<expr_arit>
+<op_soma>
+<termo>
+<op_mult>
+<fator>
+<fator_id>
+<op_unario>
+<literal>
+#Grammar
+<programa> ::= <lista_comandos_global> | î ;
+<lista_comandos_global> ::= <lista_comandos_global> <comando_global> | <comando_global> ;
+<comando_global> ::= <def_sub> | <comando> ;
+
+// REQUISITO: Definição de sub-rotinas com passagem de parâmetros
+<def_sub> ::= <def_procedimento> | <def_funcao> ;
+<def_procedimento> ::= PROCEDIMENTO_KW ID_TK ABRE_PAR <lista_params_opt> FECHA_PAR <bloco> END_KW ;
+<def_funcao> ::= FUNCAO_KW <tipo> ID_TK ABRE_PAR <lista_params_opt> FECHA_PAR <bloco> END_KW ;
+
+<lista_params_opt> ::= <lista_params> | î ;
+<lista_params> ::= <lista_params> VIRGULA <param> | <param> ;
+<param> ::= <tipo> <id_array> ;
+
+// Estruturação de Blocos
+<bloco> ::= <lista_comandos> | î ;
+<lista_comandos> ::= <lista_comandos> <comando> | <comando> ;
+
+<comando> ::= <cmd_se>
+            | <cmd_enquanto>
+            | <cmd_para>
+            | <cmd_faca>
+            | <cmd_leia>
+            | <cmd_escreva>
+            | <cmd_atrib_chamada>
+            | <cmd_retorna>
+            | <decl_var>
+            | ABRE_CH <bloco> FECHA_CH ;
+
+// REQUISITO: Declaração de múltiplas variáveis e vetores
+<decl_var> ::= <tipo> <lista_ids> PV ;
+<tipo> ::= INT_KW | FLOAT_KW | CHAR_KW | STRING_KW | BOOL_KW ;
+<lista_ids> ::= <lista_ids> VIRGULA <id_array> | <id_array> ;
+<id_array> ::= ID_TK | ID_TK ABRE_COL <expressao> FECHA_COL | ID_TK ATRIB <expressao> ;
+
+// REQUISITO: Desvios condicionais simples e compostos
+<cmd_se> ::= SE_KW ABRE_PAR <expressao> FECHA_PAR ENTAO_KW <bloco> END_KW
+           | SE_KW ABRE_PAR <expressao> FECHA_PAR ENTAO_KW <bloco> SENAO_KW <bloco> END_KW ;
+
+// REQUISITO: Três tipos de Laços de Repetição
+<cmd_enquanto> ::= ENQUANTO_KW ABRE_PAR <expressao> FECHA_PAR <bloco> END_KW ;
+<cmd_para> ::= PARA_KW ABRE_PAR <cmd_atrib_chamada_sem_pv> PV <expressao> PV <cmd_atrib_chamada_sem_pv> FECHA_PAR <bloco> END_KW ;
+<cmd_faca> ::= FACA_KW <bloco> ENQUANTO_KW ABRE_PAR <expressao> FECHA_PAR PV ;
+
+// REQUISITO: Entrada e Saída
+<cmd_leia> ::= LEIA_KW ABRE_PAR <lista_acessos> FECHA_PAR PV ;
+<lista_acessos> ::= <lista_acessos> VIRGULA <acesso> | <acesso> ;
+<acesso> ::= ID_TK <compl_acesso> ;
+<compl_acesso> ::= ABRE_COL <expressao> FECHA_COL | î ;
+
+<cmd_escreva> ::= ESCREVA_KW ABRE_PAR <lista_expr> FECHA_PAR PV ;
+
+// REQUISITO: Atribuição e Chamada (Fatorado para o GALS compilar limpo)
+<cmd_atrib_chamada> ::= ID_TK <fator_id_cmd> PV ;
+<cmd_atrib_chamada_sem_pv> ::= ID_TK <fator_id_cmd> ;
+<fator_id_cmd> ::= <compl_acesso> ATRIB <expressao> | ABRE_PAR <lista_expr_opt> FECHA_PAR ;
+
+<cmd_retorna> ::= RETORNA_KW <expressao> PV | RETORNA_KW PV ;
+
+<lista_expr_opt> ::= <lista_expr> | î ;
+<lista_expr> ::= <lista_expr> VIRGULA <expressao> | <expressao> ;
+
+// REQUISITO: Expressões aritméticas, lógicas e relacionais infinitas com parênteses
+<expressao> ::= <expr_logic> ;
+
+<expr_logic> ::= <expr_logic> AND <expr_rel>
+               | <expr_logic> OR <expr_rel>
+               | <expr_rel> ;
+
+<expr_rel> ::= <expr_arit> <op_rel> <expr_arit> | <expr_arit> ;
+<op_rel> ::= EQ | NE | GT | LT | GE | LE ;
+
+<expr_arit> ::= <expr_arit> <op_soma> <termo> | <termo> ;
+<op_soma> ::= PLUS | MINUS ;
+
+<termo> ::= <termo> <op_mult> <fator> | <fator> ;
+<op_mult> ::= MULT | DIV | MOD ;
+
+<fator> ::= ABRE_PAR <expressao> FECHA_PAR
+          | ID_TK <fator_id>
+          | <literal>
+          | <op_unario> <fator> ;
+
+// Auxilia arrays ou sub-rotinas DENTRO de uma expressão (ex: x = y[2] + func(1))
+<fator_id> ::= ABRE_COL <expressao> FECHA_COL
+             | ABRE_PAR <lista_expr_opt> FECHA_PAR
+             | î ;
+
+<op_unario> ::= MINUS | NOT | BIT_NOT ;
+
+<literal> ::= LIT_INT_DEC | LIT_FLOAT | LIT_CHAR | LIT_STRING | TRUE_KW | FALSE_KW ;

@@ -1,0 +1,62 @@
+public interface Constants extends ScannerConstants, ParserConstants
+{
+    int EPSILON  = 0;
+    int DOLLAR   = 1;
+
+    int t_INT_KW = 2;
+    int t_FLOAT_KW = 3;
+    int t_CHAR_KW = 4;
+    int t_STRING_KW = 5;
+    int t_BOOL_KW = 6;
+    int t_SE_KW = 7;
+    int t_ENTAO_KW = 8;
+    int t_SENAO_KW = 9;
+    int t_END_KW = 10;
+    int t_ENQUANTO_KW = 11;
+    int t_PARA_KW = 12;
+    int t_FACA_KW = 13;
+    int t_LEIA_KW = 14;
+    int t_ESCREVA_KW = 15;
+    int t_FUNCAO_KW = 16;
+    int t_PROCEDIMENTO_KW = 17;
+    int t_RETORNA_KW = 18;
+    int t_TRUE_KW = 19;
+    int t_FALSE_KW = 20;
+    int t_GE = 21;
+    int t_LE = 22;
+    int t_EQ = 23;
+    int t_NE = 24;
+    int t_GT = 25;
+    int t_LT = 26;
+    int t_AND = 27;
+    int t_OR = 28;
+    int t_NOT = 29;
+    int t_SHR = 30;
+    int t_SHL = 31;
+    int t_BIT_AND = 32;
+    int t_BIT_OR = 33;
+    int t_BIT_NOT = 34;
+    int t_BIT_XOR = 35;
+    int t_PLUS = 36;
+    int t_MINUS = 37;
+    int t_MULT = 38;
+    int t_DIV = 39;
+    int t_MOD = 40;
+    int t_ABRE_PAR = 41;
+    int t_FECHA_PAR = 42;
+    int t_ABRE_COL = 43;
+    int t_FECHA_COL = 44;
+    int t_ABRE_CH = 45;
+    int t_FECHA_CH = 46;
+    int t_PV = 47;
+    int t_VIRGULA = 48;
+    int t_DOIS_PONTOS = 49;
+    int t_PONTO = 50;
+    int t_ATRIB = 51;
+    int t_LIT_INT_DEC = 52;
+    int t_LIT_FLOAT = 53;
+    int t_LIT_CHAR = 54;
+    int t_LIT_STRING = 55;
+    int t_ID_TK = 56;
+
+}
