@@ -10,11 +10,13 @@ public class Semantico implements Constants {
     private String tipoAtual = "";
     private String escopoAtual = "global";
     private String ultimoId = "";
+    private String tipoExpressaoAtual = "";
 
     private boolean lendoParametros = false;
     private int posParametro = 0;
 
     private List<String> avisosSemanticos = new ArrayList<>();
+    private List<String> avisosAtribuicao = new ArrayList<>();
 
     public Semantico() {
         pilhaEscopos.push("global");
@@ -48,13 +50,17 @@ public class Semantico implements Constants {
 
             case 4:
                 // Marca o ultimo identificador como inicializado
+                validarAtribuicao(token, ultimoId);
                 marcarComoInicializado(ultimoId);
                 break;
 
             case 5:
                 // Verifica uso de identificador em expressao
                 if (isIdentificador(token)) {
-                    verificarUso(token);
+                    Simbolo s = verificarUso(token);
+                    if (s != null) {
+                        tipoExpressaoAtual = s.tipo;
+                    }
                 }
                 break;
 
@@ -93,12 +99,14 @@ public class Semantico implements Constants {
                 if (isIdentificador(token)) {
                     ultimoId = token.getLexeme();
                     verificarUso(token);
+                    tipoExpressaoAtual = "";
                 }
                 break;
 
             case 12:
                 // Marca identificador como inicializado por atribuicao
                 if (!ultimoId.isEmpty()) {
+                    validarAtribuicao(token, ultimoId);
                     marcarComoInicializado(ultimoId);
                 }
                 break;
@@ -149,7 +157,7 @@ public class Semantico implements Constants {
         s.inicializado = true;
     }
 
-    private void verificarUso(Token token) throws SemanticError {
+    private Simbolo verificarUso(Token token) throws SemanticError {
         String id = token.getLexeme();
 
         Simbolo s = tabela.buscar(id, pilhaEscopos);
@@ -159,6 +167,7 @@ public class Semantico implements Constants {
         }
 
         s.usado = true;
+        return s;
     }
 
     private void declararProcedimento(Token token) throws SemanticError {
@@ -214,6 +223,7 @@ public class Semantico implements Constants {
 
     public void atualizarAvisosSemanticos() {
         avisosSemanticos.clear();
+        avisosSemanticos.addAll(avisosAtribuicao);
 
         for (Simbolo s : tabela.getSimbolos()) {
             if (s.funcao || s.procedimento) {
@@ -235,5 +245,72 @@ public class Semantico implements Constants {
 
     private boolean isIdentificador(Token token) {
         return token != null && token.getId() == t_ID_TK;
+    }
+
+    private void validarAtribuicao(Token token, String id) throws SemanticError {
+        if (id == null || id.isEmpty()) {
+            return;
+        }
+
+        Simbolo destino = tabela.buscar(id, pilhaEscopos);
+
+        if (destino == null) {
+            throw new SemanticError("Identificador '" + id + "' nao declarado");
+        }
+
+        String tipoDestino = destino.tipo;
+        String tipoOrigem = tipoDeToken(token);
+
+        if (tipoOrigem.isEmpty()) {
+            tipoOrigem = tipoExpressaoAtual;
+        }
+
+        if (tipoOrigem.isEmpty()) {
+            return;
+        }
+
+        if (!tiposCompativeis(tipoDestino, tipoOrigem)) {
+            String aviso = "Atribuicao incompativel: '" + id + "' e " + tipoDestino
+                    + " mas recebeu " + tipoOrigem + ".";
+            avisosAtribuicao.add(aviso);
+            throw new SemanticError(aviso);
+        }
+    }
+
+    private String tipoDeToken(Token token) {
+        if (token == null) {
+            return "";
+        }
+
+        switch (token.getId()) {
+            case t_LIT_INT_DEC:
+                return "int";
+            case t_LIT_FLOAT:
+                return "float";
+            case t_LIT_CHAR:
+                return "char";
+            case t_LIT_STRING:
+                return "string";
+            case t_TRUE_KW:
+            case t_FALSE_KW:
+                return "bool";
+            case t_ID_TK:
+                Simbolo s = tabela.buscar(token.getLexeme(), pilhaEscopos);
+                return s == null ? "" : s.tipo;
+            default:
+                return "";
+        }
+    }
+
+    private boolean tiposCompativeis(String tipoDestino, String tipoOrigem) {
+        if (tipoDestino == null || tipoOrigem == null) {
+            return false;
+        }
+
+        if (tipoDestino.equals(tipoOrigem)) {
+            return true;
+        }
+
+        return tipoDestino.equals("float") && tipoOrigem.equals("int");
     }
 }
