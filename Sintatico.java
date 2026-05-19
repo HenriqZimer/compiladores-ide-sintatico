@@ -1,15 +1,13 @@
 import java.util.Stack;
 
-public class Sintatico implements Constants
-{
+public class Sintatico implements Constants {
     private final Stack<Integer> stack = new Stack<Integer>();
     private Token currentToken;
     private Token previousToken;
     private Lexico scanner;
     private Semantico semanticAnalyser;
 
-    public void parse(Lexico scanner, Semantico semanticAnalyser) throws LexicalError, SyntacticError, SemanticError
-    {
+    public void parse(Lexico scanner, Semantico semanticAnalyser) throws LexicalError, SyntacticError, SemanticError {
         this.scanner = scanner;
         this.semanticAnalyser = semanticAnalyser;
 
@@ -18,17 +16,15 @@ public class Sintatico implements Constants
 
         currentToken = scanner.nextToken();
 
-        while ( ! step() )
+        while (!step())
             ;
     }
 
-    private boolean step() throws LexicalError, SyntacticError, SemanticError
-    {
-        if (currentToken == null)
-        {
+    private boolean step() throws LexicalError, SyntacticError, SemanticError {
+        if (currentToken == null) {
             int pos = 0;
             if (previousToken != null)
-                pos = previousToken.getPosition()+previousToken.getLexeme().length();
+                pos = previousToken.getPosition() + previousToken.getLexeme().length();
 
             currentToken = new Token(DOLLAR, "$", pos);
         }
@@ -36,10 +32,9 @@ public class Sintatico implements Constants
         int token = currentToken.getId();
         int state = stack.peek();
 
-        int[] cmd = PARSER_TABLE[state][token-1];
+        int[] cmd = PARSER_TABLE[state][token - 1];
 
-        switch (cmd[0])
-        {
+        switch (cmd[0]) {
             case SHIFT:
                 stack.push(cmd[1]);
                 previousToken = currentToken;
@@ -49,11 +44,11 @@ public class Sintatico implements Constants
             case REDUCE:
                 int[] prod = PRODUCTIONS[cmd[1]];
 
-                for (int i=0; i<prod[1]; i++)
+                for (int i = 0; i < prod[1]; i++)
                     stack.pop();
 
                 int oldState = stack.peek();
-                stack.push(PARSER_TABLE[oldState][prod[0]-1][1]);
+                stack.push(PARSER_TABLE[oldState][prod[0] - 1][1]);
                 return false;
 
             case ACTION:
@@ -66,7 +61,34 @@ public class Sintatico implements Constants
                 return true;
 
             case ERROR:
-                throw new SyntacticError(PARSER_ERROR[state], currentToken.getPosition());
+                String expected = "";
+                try {
+                    java.util.List<String> names = new java.util.ArrayList<String>();
+                    java.lang.reflect.Field[] fields = Constants.class.getFields();
+                    for (java.lang.reflect.Field f : fields) {
+                        String fname = f.getName();
+                        if (!fname.startsWith("t_"))
+                            continue;
+                        try {
+                            int val = f.getInt(null);
+                            int col = val - 1;
+                            if (col >= 0 && col < PARSER_TABLE[state].length) {
+                                int[] entry = PARSER_TABLE[state][col];
+                                if (entry[0] != ERROR) {
+                                    names.add(fname + "(" + val + ")");
+                                }
+                            }
+                        } catch (Exception ignore) {
+                        }
+                    }
+                    if (!names.isEmpty())
+                        expected = " Expected tokens: " + names.toString();
+                } catch (Throwable ignore) {
+                }
+
+                String err = PARSER_ERROR[state] + " token:" + token + " lexeme:'" + currentToken.getLexeme() + "'"
+                        + expected;
+                throw new SyntacticError(err, currentToken.getPosition());
         }
         return false;
     }

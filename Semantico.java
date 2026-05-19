@@ -1,97 +1,210 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Stack;
 
 public class Semantico implements Constants {
 
-    TabelaSimbolos tabela = new TabelaSimbolos();
+    private TabelaDeSimbolos tabela = new TabelaDeSimbolos();
+    private Stack<String> pilhaEscopos = new Stack<>();
+
+    private String tipoAtual = "";
+    private String escopoAtual = "global";
+    private String ultimoId = "";
+
+    private boolean lendoParametros = false;
+    private int posParametro = 0;
+
     private List<String> avisosSemanticos = new ArrayList<>();
 
-    String tipoAtual = "";
-    String escopoAtual = "global";
+    public Semantico() {
+        pilhaEscopos.push("global");
+    }
 
     public void executeAction(int action, Token token) throws SemanticError {
 
-        Simbolo s;
+        // Use essa linha para testar se as ações do .gals estão sendo chamadas.
+        // Depois que estiver funcionando, pode comentar ou apagar.
+        String lexema = token == null ? "<null>" : token.getLexeme();
+        System.out.println("Acao chamada: #" + action + " token: " + lexema);
 
         switch (action) {
 
-            // ========== AÇÃO 1: Capturar tipo (INT_KW, FLOAT_KW, CHAR_KW, STRING_KW, BOOL_KW) ==========
             case 1:
+                // Guarda o tipo atual
                 tipoAtual = token.getLexeme();
                 break;
 
-            // ========== AÇÃO 2: Inserir variável simples (ID_TK sem modificadores) ==========
             case 2:
-                tabela.inserir(token.getLexeme(), tipoAtual, "variavel", escopoAtual);
+                // Insere variavel, vetor ou parametro
+                if (isIdentificador(token)) {
+                    inserirIdentificador(token);
+                }
                 break;
 
-            // ========== AÇÃO 5: Inserir vetor (ID_TK ABRE_COL ... FECHA_COL) ==========
+            case 3:
+                // Marca o ultimo identificador como vetor
+                marcarComoVetor();
+                break;
+
+            case 4:
+                // Marca o ultimo identificador como inicializado
+                marcarComoInicializado(ultimoId);
+                break;
+
             case 5:
-                tabela.inserir(token.getLexeme(), tipoAtual, "vetor", escopoAtual);
+                // Verifica uso de identificador em expressao
+                if (isIdentificador(token)) {
+                    verificarUso(token);
+                }
                 break;
 
-            // ========== AÇÃO 10: Verificar identificador em expressão (fator) ==========
+            case 6:
+                // Declara procedimento e entra no escopo dele
+                if (isIdentificador(token)) {
+                    declararProcedimento(token);
+                }
+                break;
+
+            case 7:
+                // Declara funcao e entra no escopo dela
+                if (isIdentificador(token)) {
+                    declararFuncao(token);
+                }
+                break;
+
+            case 8:
+                // Comeca leitura de parametros
+                lendoParametros = true;
+                posParametro = 0;
+                break;
+
+            case 9:
+                // Termina leitura de parametros
+                lendoParametros = false;
+                break;
+
             case 10:
-                s = tabela.buscar(token.getLexeme(), escopoAtual);
-                if (s == null) {
-                    throw new SemanticError("Erro: identificador '" + token.getLexeme() + "' não foi declarado no escopo.");
-                }
-                tabela.marcarUsado(token.getLexeme(), escopoAtual);
-                // Verificar inicialização
-                if (!s.inicializado && !s.modalidade.equals("parametro")) {
-                    String aviso = "Aviso: a variável '" + s.nome + "' está sendo usada sem ter sido inicializada.";
-                    System.out.println(aviso);
-                    avisosSemanticos.add(aviso);
-                }
+                // Sai do escopo atual
+                sairEscopo();
                 break;
 
-            // ========== AÇÃO 11: Verificar identificador em atribuição/chamada ==========
             case 11:
-                s = tabela.buscar(token.getLexeme(), escopoAtual);
-                if (s == null) {
-                    throw new SemanticError("Erro: identificador '" + token.getLexeme() + "' não foi declarado no escopo.");
+                // Verifica identificador usado em comando, leitura, atribuicao ou chamada
+                if (isIdentificador(token)) {
+                    ultimoId = token.getLexeme();
+                    verificarUso(token);
                 }
                 break;
 
-            // ========== AÇÃO 20: Marcar como inicializado (ID_TK ATRIB <expressao>) ==========
-            case 20:
-                s = tabela.buscar(token.getLexeme(), escopoAtual);
-                if (s != null) {
-                    s.inicializado = true;
-                    tabela.marcarUsado(token.getLexeme(), escopoAtual);
+            case 12:
+                // Marca identificador como inicializado por atribuicao
+                if (!ultimoId.isEmpty()) {
+                    marcarComoInicializado(ultimoId);
                 }
                 break;
 
-            // ========== AÇÃO 21: Verificar inicialização em leitura (cmd_leia) ==========
-            case 21:
-                s = tabela.buscar(token.getLexeme(), escopoAtual);
-                if (s == null) {
-                    throw new SemanticError("Erro: identificador '" + token.getLexeme() + "' não foi declarado no escopo.");
+            case 13:
+                // Marca identificador como inicializado por leitura
+                if (!ultimoId.isEmpty()) {
+                    marcarComoInicializado(ultimoId);
                 }
-                // Verificar se será inicializado pela leitura
-                s.inicializado = true;
-                tabela.marcarUsado(token.getLexeme(), escopoAtual);
-                break;
-
-            // ========== AÇÃO 41: Verificar operações válidas em expressões aritméticas ==========
-            case 41:
-                // Verificação de tipo em operações (pode ser expandido)
                 break;
 
             default:
-                System.out.println("Ação semântica #" + action + " não implementada.");
+                throw new SemanticError("Acao semantica nao implementada: #" + action);
         }
     }
 
-    public void entrarEscopo(String nomeEscopo) {
-        escopoAtual = nomeEscopo;
+    private void inserirIdentificador(Token token) throws SemanticError {
+        String id = token.getLexeme();
+        ultimoId = id;
+
+        Simbolo simbolo = new Simbolo(id, tipoAtual, escopoAtual);
+
+        if (lendoParametros) {
+            simbolo.parametro = true;
+            posParametro++;
+            simbolo.posicaoParametro = posParametro;
+            simbolo.inicializado = true;
+        }
+
+        tabela.inserir(simbolo);
     }
 
-    public void sairEscopo() {
-        escopoAtual = "global";
+    private void marcarComoVetor() {
+        Simbolo s = tabela.ultimo();
+
+        if (s != null) {
+            s.vetor = true;
+        }
     }
 
-    public TabelaSimbolos getTabela() {
+    private void marcarComoInicializado(String id) throws SemanticError {
+        Simbolo s = tabela.buscar(id, pilhaEscopos);
+
+        if (s == null) {
+            throw new SemanticError("Identificador '" + id + "' nao declarado");
+        }
+
+        s.inicializado = true;
+    }
+
+    private void verificarUso(Token token) throws SemanticError {
+        String id = token.getLexeme();
+
+        Simbolo s = tabela.buscar(id, pilhaEscopos);
+
+        if (s == null) {
+            throw new SemanticError("Identificador '" + id + "' nao declarado");
+        }
+
+        s.usado = true;
+    }
+
+    private void declararProcedimento(Token token) throws SemanticError {
+        String id = token.getLexeme();
+        ultimoId = id;
+
+        Simbolo simbolo = new Simbolo(id, "procedimento", "global");
+        simbolo.procedimento = true;
+        simbolo.inicializado = true;
+
+        tabela.inserir(simbolo);
+
+        entrarEscopo(id);
+    }
+
+    private void declararFuncao(Token token) throws SemanticError {
+        String id = token.getLexeme();
+        ultimoId = id;
+
+        Simbolo simbolo = new Simbolo(id, tipoAtual, "global");
+        simbolo.funcao = true;
+        simbolo.inicializado = true;
+
+        tabela.inserir(simbolo);
+
+        entrarEscopo(id);
+    }
+
+    private void entrarEscopo(String novoEscopo) {
+        pilhaEscopos.push(novoEscopo);
+        escopoAtual = novoEscopo;
+    }
+
+    private void sairEscopo() {
+        if (pilhaEscopos.size() > 1) {
+            pilhaEscopos.pop();
+        }
+
+        escopoAtual = pilhaEscopos.peek();
+    }
+
+    public void imprimirTabela() {
+        tabela.imprimir();
+    }
+
+    public TabelaDeSimbolos getTabela() {
         return tabela;
     }
 
@@ -99,38 +212,28 @@ public class Semantico implements Constants {
         return avisosSemanticos;
     }
 
-    public void exibirAvisosSemanticos() {
-        if (!avisosSemanticos.isEmpty()) {
-            System.out.println("\n===== AVISOS SEMÂNTICOS =====");
-            for (String aviso : avisosSemanticos) {
-                System.out.println(aviso);
+    public void atualizarAvisosSemanticos() {
+        avisosSemanticos.clear();
+
+        for (Simbolo s : tabela.getSimbolos()) {
+            if (s.funcao || s.procedimento) {
+                continue;
             }
-            System.out.println("=============================\n");
+
+            if (!s.usado) {
+                avisosSemanticos.add(
+                        "Identificador '" + s.id + "' declarado e nao utilizado (escopo: " + s.escopo + ").");
+            }
+
+            if (!s.inicializado && !s.parametro) {
+                avisosSemanticos.add(
+                        "Identificador '" + s.id + "' declarado mas nunca inicializado (escopo: " + s.escopo
+                                + ").");
+            }
         }
     }
 
-    public static void main(String[] args) throws Exception {
-
-        Semantico s = new Semantico();
-
-        // Teste: inserir variáveis
-        s.tipoAtual = "int";
-        s.executeAction(2, new Token(0, "x", 0));
-
-        s.tipoAtual = "int";
-        s.executeAction(2, new Token(0, "y", 0));
-
-        // Teste: atribuição (ação 20)
-        s.executeAction(20, new Token(0, "x", 0));
-
-        // Teste: usar variável (ação 10)
-        s.executeAction(10, new Token(0, "x", 0));
-
-        // Teste: usar variável não inicializada
-        s.executeAction(10, new Token(0, "y", 0));
-
-        // Exibir tabela
-        s.getTabela().imprimir();
-        s.exibirAvisosSemanticos();
+    private boolean isIdentificador(Token token) {
+        return token != null && token.getId() == t_ID_TK;
     }
 }
