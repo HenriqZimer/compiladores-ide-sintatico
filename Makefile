@@ -9,7 +9,7 @@ MAIN = IDECompilador
 SOURCES = $(wildcard $(SRC_DIR)/*.java)
 
 # Define o alvo padrão (compilar tudo)
-all: compile
+all: compile run
 
 # Cria a pasta bin se não existir e compila os arquivos
 compile:
